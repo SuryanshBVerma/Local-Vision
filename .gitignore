@@ -1,0 +1,78 @@
+# .gitignore for a .NET 9 project (Visual Studio 2022 / VSCode / Rider)
+# Generated to ignore build artifacts, IDE/user files, NuGet packages, logs and publish output.
+
+## Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Build outputs
+[Bb]in/
+[Oo]bj/
+artifacts/
+out/
+publish/
+
+## Rider / JetBrains
+.idea/
+*.sln.iml
+*.ipr
+*.iws
+_ReSharper*/
+*/_ReSharper.*
+*.DotSettings.user
+
+## Visual Studio Code
+.vscode/
+
+## NuGet
+*.nupkg
+packages/
+.nuget/packages/
+
+## Dotnet tooling
+.dotnet/
+dotnet-tools.json
+/.dotnet/tools/
+
+## Runtime / Debug / Profiling
+*.dll
+*.exe
+*.pdb
+*.mdb
+*.ilk
+*.log
+*.stackdump
+*.dmp
+
+## Test results / coverage
+TestResults/
+*.trx
+*.coverage
+coverage*.xml
+coverage/
+
+## Rider / ReSharper caches
+.idea/
+*.idea/
+
+## ASP.NET / IIS
+logs/
+*.vspscc
+*.vssscc
+
+## Node / front-end (if present)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+
+## Misc
+*.DS_Store
+*.bak
+*.backup
+*.tmp
+*.temp
