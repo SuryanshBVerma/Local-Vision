@@ -1,9 +1,18 @@
+using Minio;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+builder.Services.AddSingleton(sp =>
+{
+    return new Minio.MinioClient()
+        .WithEndpoint("localhost:9000")
+        .WithCredentials("admin", "password123")
+        .WithSSL(false)
+        .Build();
+});
 
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
