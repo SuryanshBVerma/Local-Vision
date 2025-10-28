@@ -7,12 +7,13 @@ var minio = builder.AddContainer("minio", "quay.io/minio/minio")
     .WithEnvironment("MINIO_ROOT_USER", "admin")
     .WithEnvironment("MINIO_ROOT_PASSWORD", "password123")
     //.WithVolume("./minio/data", "/data")
-    .WithEndpoint(9090, targetPort: 9090);
+    .WithEndpoint(name: "api", port: 9000, targetPort: 9000)      
+    .WithEndpoint(name: "console", port: 9090, targetPort: 9090); 
 
 
-var imageService = builder.AddProject<Projects.Backend>("imageservice");
+var backend = builder.AddProject<Projects.Backend>("backend-service");
 
 var gateway = builder.AddProject<Projects.Gateway>("gateway")
-    .WithReference(imageService);
+    .WithReference(backend);
 
 builder.Build().Run();

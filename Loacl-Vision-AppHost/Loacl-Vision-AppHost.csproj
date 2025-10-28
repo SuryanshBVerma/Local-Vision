@@ -19,4 +19,9 @@
     <ProjectReference Include="..\Gateway\Gateway.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="minio\data\" />
+    <Folder Include="minio\" />
+  </ItemGroup>
+
 </Project>
