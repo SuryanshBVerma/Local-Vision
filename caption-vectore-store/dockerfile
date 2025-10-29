@@ -13,8 +13,14 @@ COPY main.py save_model.py ./
 # Install dependencies via uv (fast, cached)
 RUN uv sync --frozen --no-dev
 
-# Download the BLIP model once and store it in /app/blip_model
+# Download the model once and store it in /app/modelS
 RUN uv run python save_model.py
+
+# Create embeddings directory
+RUN mkdir -p /app/embeddings
+
+# Set environment variable for volume path
+ENV EMBEDDINGS_DIR=/app/embeddings
 
 # Expose FastAPI port
 EXPOSE 8000
