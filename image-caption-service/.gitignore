@@ -1,0 +1,65 @@
+# ----------------------------
+# FastAPI Image Caption Service
+# ----------------------------
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# uv environment & lock files
+.uv/
+uv.lock
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Logs
+*.log
+logs/
+*.out
+
+# Environment / secrets
+.env
+.env.*
+!env.example
+
+# Jupyter / notebooks
+*.ipynb_checkpoints
+
+# macOS / Windows / Linux
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+
+# IDEs / Editors
+.vscode/
+.idea/
+*.swp
+
+# Model and large data files
+blip_model/
+datasets/
+checkpoints/
+outputs/
+*.bin
+*.pt
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Uploaded files
+uploads/

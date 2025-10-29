@@ -1,0 +1,23 @@
+# Dockerfile 
+
+# Base image with Python and UV
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy project files
+COPY pyproject.toml uv.lock ./
+COPY main.py save_model.py ./
+
+# Install dependencies via uv (fast, cached)
+RUN uv sync --frozen --no-dev
+
+# Download the BLIP model once and store it in /app/blip_model
+RUN uv run python save_model.py
+
+# Expose FastAPI port
+EXPOSE 8000
+
+# Run the FastAPI app
+CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
