@@ -1,0 +1,54 @@
+# ---------------------------
+# Python / FastAPI Project
+# ---------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.log
+*.sqlite3
+*.db
+
+# ---------------------------
+# Virtual Environment (uv)
+# ---------------------------
+.venv/
+.env
+.env.*
+
+# ---------------------------
+# Build / Packaging
+# ---------------------------
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# ---------------------------
+# FAISS / Embedding Files
+# ---------------------------
+embeddings/*.index
+embeddings/*.db
+embeddings/*.npy
+embeddings/*.pt
+embeddings/*.pkl
+
+# ---------------------------
+# OS / Editor Junk
+# ---------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# ---------------------------
+# Docker
+# ---------------------------
+*.tar
+*.bak
+*.tmp
+.cache/
+__pycache__/
+docker-compose.override.yml
