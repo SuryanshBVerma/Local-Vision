@@ -6,6 +6,7 @@ import faiss
 import numpy as np
 import sqlite3
 import os
+from pathlib import Path
 
 # -------------------------
 # Setup
@@ -14,13 +15,21 @@ EMBED_DIM = 384
 MODEL_NAME = "all-MiniLM-L6-v2"
 DB_PATH = "./embeddings/captions.db"
 INDEX_PATH = "./embeddings/captions.index"
+LOCAL_MODEL_DIR = Path("models") / MODEL_NAME
 
 os.makedirs("embeddings", exist_ok=True)
 
 app = FastAPI(title="Caption Embedding Store")
 
 # Load embedding model
-model = SentenceTransformer(MODEL_NAME)
+if LOCAL_MODEL_DIR.exists():
+    print(f"🔹 Loading local model from {LOCAL_MODEL_DIR}")
+    model = SentenceTransformer(str(LOCAL_MODEL_DIR))
+else:
+    print(f"⚠️ Local model not found, downloading {MODEL_NAME}...")
+    model = SentenceTransformer(MODEL_NAME)
+    os.makedirs("models", exist_ok=True)
+    model.save(str(LOCAL_MODEL_DIR))
 
 # Load or initialize FAISS index
 if os.path.exists(INDEX_PATH):
