@@ -1,0 +1,22 @@
+# Ignore local development files
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.env
+.env.*
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Ignore large model downloads (optional if using local copy)
+datasets/
+checkpoints/
+outputs/
+
+# If you want to build without bundling model weights
+# comment out the next line if you WANT to include them
+blip_model/
