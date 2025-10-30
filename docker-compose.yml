@@ -1,0 +1,75 @@
+version: '3.8'
+
+networks:
+  local-vision-net:
+    driver: bridge
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Gateway/Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=https://+:5000
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=mypassword123
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+    volumes:
+      - gateway_certs:/https
+    networks:
+      - local-vision-net
+    depends_on:
+      - backend
+      - image-caption-service
+      - caption-vector-store
+      - minio
+
+  backend:
+    build:
+      context: .
+      dockerfile: Backend/Dockerfile
+    ports:
+      - "7001:7001"
+    networks:
+      - local-vision-net
+
+  image-caption-service:
+    build:
+      context: ./image-caption-service
+      dockerfile: dockerfile
+    ports:
+      - "8001:8000"
+    networks:
+      - local-vision-net
+
+  caption-vector-store:
+    build:
+      context: ./caption-vector-store
+      dockerfile: dockerfile
+    ports:
+      - "8002:8000"
+    volumes:
+      - caption_embeddings:/app/embeddings
+    networks:
+      - local-vision-net
+
+  minio:
+    image: quay.io/minio/minio
+    command: server /data --console-address ":9090"
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password123
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    volumes:
+      - minio_data:/data
+    networks:
+      - local-vision-net
+
+volumes:
+  caption_embeddings:
+  minio_data:
+  gateway_certs:
