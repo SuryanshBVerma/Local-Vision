@@ -10,14 +10,21 @@ services:
       context: .
       dockerfile: Gateway/Dockerfile
     ports:
-      - "8080:8080"
-      - "8081:8081"
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=https://+:5000
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=mypassword123
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+    volumes:
+      - gateway_certs:/https
     networks:
       - local-vision-net
     depends_on:
       - backend
       - image-caption-service
       - caption-vector-store
+      - minio
 
   backend:
     build:
@@ -65,3 +72,4 @@ services:
 volumes:
   caption_embeddings:
   minio_data:
+  gateway_certs:
