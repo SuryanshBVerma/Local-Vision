@@ -24,8 +24,7 @@ services:
       context: .
       dockerfile: Backend/Dockerfile
     ports:
-      - "5000:8080"
-      - "5001:8081"
+      - "7001:7001"
     networks:
       - local-vision-net
 
