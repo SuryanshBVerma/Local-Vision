@@ -93,6 +93,15 @@ namespace Backend.Controllers
             if (!exists)
                 return NotFound(new { message = $"Bucket '{bucketName}' does not exist." });
 
+            // Validate file type (only images)
+            var allowedContentTypes = new[] { "image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp" };
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp" };
+
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+
+            if (!allowedContentTypes.Contains(file.ContentType.ToLower()) || !allowedExtensions.Contains(extension))
+                return BadRequest(new { message = "Only image files (JPG, PNG, GIF, WEBP, BMP) are allowed." });
+
             var objectName = file.FileName;
 
             using var stream = file.OpenReadStream();
