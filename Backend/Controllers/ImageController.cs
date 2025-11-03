@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Backend.Models.DTO;
+using Microsoft.AspNetCore.Mvc;
 using Minio;
 using Minio.ApiEndpoints;
 using Minio.DataModel;
@@ -13,8 +14,13 @@ namespace Backend.Controllers
     public class StorageController : ControllerBase
     {
         private readonly IMinioClient _minio;
+        private readonly HttpClient _httpClient;
 
-        public StorageController(IMinioClient minio) => _minio = minio;
+        public StorageController(IMinioClient minio, IHttpClientFactory httpClientFactory)
+        {
+            _minio = minio;
+            _httpClient = httpClientFactory.CreateClient();
+        }
 
         // Create a bucket
         [HttpPost("bucket/{bucketName}")]
@@ -119,12 +125,56 @@ namespace Backend.Controllers
                 .WithContentType(file.ContentType)
                 .WithHeaders(metadata));
 
+            var cleanEtag = response.Etag?.Trim('"');
+
+            // ------------------------------
+            // Async calls to other services
+            // ------------------------------
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var httpClient = new HttpClient();
+
+                    // Send image to caption service
+                    using var captionForm = new MultipartFormDataContent();
+                    file.OpenReadStream().Position = 0;
+                    captionForm.Add(new StreamContent(file.OpenReadStream()), "image", file.FileName);
+
+                    var captionResponse = await httpClient.PostAsync("http://image-caption-service:8000/caption", captionForm);
+                    captionResponse.EnsureSuccessStatusCode();
+
+                    var captionJson = await captionResponse.Content.ReadAsStringAsync();
+                    var captionResult = JsonSerializer.Deserialize<JsonElement>(captionJson);
+                    var captionText = captionResult.GetProperty("caption").GetString();
+
+                    // Send caption + ETag to vector store
+                    var vectorPayload = new
+                    {
+                        etag = cleanEtag,
+                        caption = captionText
+                    };
+
+                    var content = new StringContent(JsonSerializer.Serialize(vectorPayload), System.Text.Encoding.UTF8, "application/json");
+                    var vectorResponse = await httpClient.PostAsync("http://caption-vector-store:8000/add_caption", content);
+                    vectorResponse.EnsureSuccessStatusCode();
+
+                    Console.WriteLine($"Embedded caption for {file.FileName} -> {captionText}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"⚠️ Failed async caption/embed for {file.FileName}: {ex.Message}");
+                }
+            });
+
             return Ok(new
             {
-                id = response.Etag?.Trim('"'),
+                id = cleanEtag,
                 objectName,
                 description
             });
+
         }
 
 
