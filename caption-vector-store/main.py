@@ -45,7 +45,8 @@ cur.execute("""
 CREATE TABLE IF NOT EXISTS captions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     etag TEXT UNIQUE,
-    caption TEXT
+    caption TEXT,
+    bucket TEXT
 )
 """)
 conn.commit()
@@ -56,6 +57,7 @@ conn.commit()
 class AddCaptionRequest(BaseModel):
     etag: str
     caption: str
+    bucket: str 
 
 class SearchRequest(BaseModel):
     query: str
@@ -82,12 +84,15 @@ def add_caption(req: AddCaptionRequest):
     if existing:
         raise HTTPException(status_code=400, detail="Caption already exists for this ETAG")
 
-    # Embed caption
+    # Embed and normalize
     emb = model.encode([req.caption], convert_to_numpy=True)
     emb = normalize(emb.astype('float32'))
 
     # Insert into SQLite
-    cur.execute("INSERT INTO captions (etag, caption) VALUES (?, ?)", (req.etag, req.caption))
+    cur.execute(
+        "INSERT INTO captions (etag, caption, bucket) VALUES (?, ?, ?)",
+        (req.etag, req.caption, req.bucket)
+    )
     conn.commit()
     new_id = cur.lastrowid
 
@@ -97,29 +102,33 @@ def add_caption(req: AddCaptionRequest):
     # Save
     save_state()
 
-    return {"status": "success", "etag": req.etag}
+    return {"status": "success", "etag": req.etag, "bucket": req.bucket}
+
 
 @app.post("/search_captions")
 def search_captions(req: SearchRequest):
-    # Encode query
-    emb = model.encode([req.query], convert_to_numpy=True)
-    emb = normalize(emb.astype('float32'))
-
-    # Search
     if index.ntotal == 0:
         raise HTTPException(status_code=404, detail="No captions indexed yet")
 
+    # Encode and normalize query
+    emb = model.encode([req.query], convert_to_numpy=True)
+    emb = normalize(emb.astype('float32'))
+
+    # Perform vector search
     distances, ids = index.search(emb, req.limit)
 
     results = []
     for dist, idx in zip(distances[0], ids[0]):
         if idx == -1:
             continue
-        row = cur.execute("SELECT etag, caption FROM captions WHERE id = ?", (int(idx),)).fetchone()
+        row = cur.execute(
+            "SELECT etag, caption, bucket FROM captions WHERE id = ?", (int(idx),)
+        ).fetchone()
         if row:
             results.append({
                 "etag": row[0],
                 "caption": row[1],
+                "bucket": row[2], 
                 "score": float(dist)
             })
 
