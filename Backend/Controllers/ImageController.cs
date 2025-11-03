@@ -138,9 +138,13 @@ namespace Backend.Controllers
                     using var httpClient = new HttpClient();
 
                     // Send image to caption service
-                    using var captionForm = new MultipartFormDataContent();
-                    file.OpenReadStream().Position = 0;
-                    captionForm.Add(new StreamContent(file.OpenReadStream()), "image", file.FileName);
+                    await using var stream = file.OpenReadStream(); // open once
+                    stream.Position = 0;
+
+                    using var captionForm = new MultipartFormDataContent
+                    {
+                        { new StreamContent(stream), "image", file.FileName }
+                    };
 
                     var captionResponse = await httpClient.PostAsync("http://image-caption-service:8000/caption", captionForm);
                     captionResponse.EnsureSuccessStatusCode();
@@ -153,7 +157,8 @@ namespace Backend.Controllers
                     var vectorPayload = new
                     {
                         etag = cleanEtag,
-                        caption = captionText
+                        caption = captionText,
+                        bucket = bucketName
                     };
 
                     var content = new StringContent(JsonSerializer.Serialize(vectorPayload), System.Text.Encoding.UTF8, "application/json");
@@ -258,7 +263,7 @@ namespace Backend.Controllers
         }
 
 
-        
+
         [HttpDelete("bucket/{bucketName}/object/{etag}")]
         public async Task<IActionResult> DeleteObjectByETag(string bucketName, string etag)
         {
@@ -297,6 +302,70 @@ namespace Backend.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "Failed to delete object.", error = ex.Message });
+            }
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchImages([FromQuery] string query, [FromQuery] int limit = 5)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return BadRequest(new { message = "Query text is required." });
+
+            try
+            {
+                var vectorStoreUrl = Environment.GetEnvironmentVariable("VECTOR_STORE_URL")
+                                     ?? "http://caption-vector-store:8000";
+
+                using var httpClient = new HttpClient();
+                var searchPayload = new
+                {
+                    query,
+                    limit
+                };
+
+                var response = await httpClient.PostAsJsonAsync($"{vectorStoreUrl}/search_captions", searchPayload);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    return StatusCode((int)response.StatusCode, new { message = "Vector store search failed.", details = error });
+                }
+
+                var searchResults = await response.Content.ReadFromJsonAsync<SearchResponse>();
+
+                // Optionally enrich with object metadata from MinIO
+                var matchedObjects = new List<object>();
+
+                foreach (var item in searchResults?.Results ?? [])
+                {
+                    // Find object in MinIO by ETag (using bucket name from vector store)
+                    await foreach (var obj in _minio.ListObjectsEnumAsync(
+                        new ListObjectsArgs()
+                            .WithBucket(item.bucket) // use bucket name dynamically
+                            .WithRecursive(true)))
+                    {
+                        if (string.Equals(obj.ETag?.Trim('"'), item.Etag.Trim('"'), StringComparison.OrdinalIgnoreCase))
+                        {
+                            matchedObjects.Add(new
+                            {
+                                etag = item.Etag,
+                                caption = item.Caption,
+                                score = item.Score,
+                                bucket = item.bucket,
+                                objectName = obj.Key,
+                                size = obj.Size,
+                                lastModified = obj.LastModified
+                            });
+                            break;
+                        }
+                    }
+
+                }
+
+                return Ok(matchedObjects);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Search failed.", error = ex.Message });
             }
         }
 
