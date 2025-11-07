@@ -1,10 +1,13 @@
 # main.py
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, HTTPException
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from PIL import Image
 from contextlib import asynccontextmanager
 import torch
 import os
+import requests
+from pydantic import BaseModel, HttpUrl
+from io import BytesIO
 
 MODEL_PATH = "./blip_model"
 
@@ -31,21 +34,40 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+class ImageUrlRequest(BaseModel):
+    image_url: HttpUrl
+
 
 @app.post("/caption")
-async def caption_image(image: UploadFile = File(...)):
+async def caption_image(request: ImageUrlRequest):
     try:
-        img = Image.open(image.file).convert("RGB")
-        inputs = app.state.processor(img, return_tensors="pt")
+        # Download the image from the URL
+        response = requests.get(request.image_url, timeout=10)
+        response.raise_for_status()
 
-        with torch.no_grad():
-            out = app.state.model.generate(**inputs, max_new_tokens=100)
+        # Load it into Pillow
+        img = Image.open(BytesIO(response.content)).convert("RGB")
 
-        caption = app.state.processor.decode(out[0], skip_special_tokens=True)
-        return {"caption": caption}
+        # Generate caption
+        caption = generate_caption(app, img)
+        return {"caption": caption, "source_url": request.image_url}
 
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=f"Failed to process image: {str(e)}")
+
+def generate_caption(app: FastAPI, img: Image.Image) -> str:
+    prompt = "a detailed description of the image:"
+    inputs = app.state.processor(img, return_tensors="pt")
+
+    with torch.no_grad():
+        out = app.state.model.generate(
+            **inputs,
+            max_new_tokens=50,
+            num_beams=5,
+            repetition_penalty=1.2,
+        )
+
+    return app.state.processor.decode(out[0], skip_special_tokens=True)
 
 
 @app.get("/health")
