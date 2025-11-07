@@ -6,6 +6,7 @@ using Minio.DataModel;
 using Minio.DataModel.Args;
 using Minio.Exceptions;
 using System.Text.Json;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Backend.Controllers
 {
@@ -127,9 +128,9 @@ namespace Backend.Controllers
 
             var cleanEtag = response.Etag?.Trim('"');
 
-            // ------------------------------
-            // Async calls to other services
-            // ------------------------------
+            // ----------------------------------------------
+            // Async calls to caption and vectore store
+            // ----------------------------------------------
 
             _ = Task.Run(async () =>
             {
@@ -138,15 +139,28 @@ namespace Backend.Controllers
                     using var httpClient = new HttpClient();
 
                     // Send image to caption service
-                    await using var stream = file.OpenReadStream(); // open once
-                    stream.Position = 0;
 
-                    using var captionForm = new MultipartFormDataContent
+                    // Generate presigned URL for the uploaded image
+
+                    var presignedUrlArgs = new PresignedGetObjectArgs()
+                        .WithBucket(bucketName)
+                        .WithObject(objectName)
+                        .WithExpiry(60 * 60 * 24); // 24 hours expiry
+
+
+                    var imageUrl = await _minio.PresignedGetObjectAsync(presignedUrlArgs);
+
+                    var captionPayload = new
                     {
-                        { new StreamContent(stream), "image", file.FileName }
+                        image_url = imageUrl
                     };
 
-                    var captionResponse = await httpClient.PostAsync("http://image-caption-service:8000/caption", captionForm);
+                    var captionContent = new StringContent(
+                        JsonSerializer.Serialize(captionPayload),
+                        System.Text.Encoding.UTF8,
+                        "application/json");
+
+                    var captionResponse = await httpClient.PostAsync("http://image-caption-service:8000/caption", captionContent);
                     captionResponse.EnsureSuccessStatusCode();
 
                     var captionJson = await captionResponse.Content.ReadAsStringAsync();
