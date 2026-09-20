@@ -30,7 +30,7 @@ To run the application, you will need to have Docker and .NET 9 installed.
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-username/Local-Vision.git
+   git clone https://github.com/SuryanshBVerma/Local-Vision.git
    ```
 2. **Run the application:**
    - Using Docker Compose:
@@ -38,7 +38,7 @@ To run the application, you will need to have Docker and .NET 9 installed.
      docker-compose up -d
      ```
    - Using .NET Aspire:
-     - Navigate to the `Loacl-Vision-AppHost` directory.
+     - Navigate to the `Loacl-Vision` directory.
      - Run the application using the .NET CLI:
        ```bash
        dotnet run
